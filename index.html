@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشروع البرمجة - لعبة الذاكرة</title>
+    <style>
+        /* CSS - التصميم العصري */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --accent-color: #ffde59;
+            --bg-dark: #1a1a2e;
+            --card-color: #16213e;
+            --text-white: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-white);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding-bottom: 100px; /* مساحة للفوتر */
+        }
+
+        /* شاشة البداية */
+        #start-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .config-box {
+            background: var(--card-color);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .btn-start {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        /* واجهة اللعبة */
+        .game-header {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .score-board {
+            display: flex;
+            gap: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .active-player {
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            width: 90vw;
+            max-width: 500px;
+        }
+
+        .card {
+            aspect-ratio: 1/1;
+            background: var(--card-color);
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.flipped { transform: rotateY(180deg); }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%; height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border-radius: 10px;
+        }
+
+        .card-front { background: var(--primary-gradient); }
+        .card-back { background: #eee; color: #333; transform: rotateY(180deg); }
+
+        .matched { visibility: hidden; pointer-events: none; }
+
+        /* الفوتر الإلزامي */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #000;
+            color: #fff;
+            text-align: center;
+            padding: 15px 0;
+            border-top: 2px solid #764ba2;
+            z-index: 2000;
+        }
+
+        footer p { margin: 5px 0; font-size: 0.9rem; }
+
+        @media (max-width: 480px) {
+            .grid { grid-template-columns: repeat(4, 1fr); }
+            .card-back { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <div class="config-box">
+            <h2>إعدادات اللعبة</h2>
+            <select id="mode" onchange="toggleP2()">
+                <option value="solo">لاعب ضد الكمبيوتر</option>
+                <option value="multi">لاعب ضد لاعب</option>
+            </select>
+            <input type="text" id="p1-name" placeholder="اسم اللاعب الأول" value="لاعب 1">
+            <input type="text" id="p2-name" placeholder="اسم اللاعب الثاني" style="display:none;" value="لاعب 2">
+            <button class="btn-start" onclick="initGame()">ابدأ اللعبة</button>
+        </div>
+    </div>
+
+    <div class="game-header">
+        <h1>لعبة الذاكرة الحديثة</h1>
+        <div class="score-board">
+            <div id="score1-box" class="active-player" style="padding:10px; border-radius:10px;">
+                <span id="name1">اللاعب 1</span>: <span id="score1">0</span>
+            </div>
+            <div id="score2-box" style="padding:10px; border-radius:10px;">
+                <span id="name2">الكمبيوتر</span>: <span id="score2">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <footer>
+        <p>اسم الطالب: <strong>اسامة عبدالمجيد بن احمد القرني</strong></p>
+        <p>الرقم الجامعي: <strong>44610079</strong></p>
+        <p>إشراف الدكتور: <strong>محمد أحمد جبالي</strong></p>
+    </footer>
+
+    <script>
+        let cards = [];
+        let flipped = [];
+        let scores = [0, 0];
+        let turn = 0;
+        let isSolo = true;
+        let lockBoard = false;
+        const icons = ['⭐', '🌙', '🚀', '🌈', '💎', '🔥', '🍎', '⚽'];
+
+        function toggleP2() {
+            const mode = document.getElementById('mode').value;
+            const p2Input = document.getElementById('p2-name');
+            p2Input.style.display = (mode === 'multi') ? 'block' : 'none';
+        }
+
+        function initGame() {
+            const mode = document.getElementById('mode').value;
+            isSolo = (mode === 'solo');
+            
+            // ضبط الأسماء
+            document.getElementById('name1').innerText = document.getElementById('p1-name').value;
+            document.getElementById('name2').innerText = isSolo ? 'الكمبيوتر' : document.getElementById('p2-name').value;
+            
+            document.getElementById('start-screen').style.display = 'none';
+            
+            const fullSet = [...icons, ...icons].sort(() => Math.random() - 0.5);
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+
+            fullSet.forEach(icon => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-front"></div>
+                    <div class="card-back">${icon}</div>
+                `;
+                card.dataset.icon = icon;
+                card.onclick = () => flipCard(card);
+                grid.appendChild(card);
+            });
+        }
+
+        function flipCard(card) {
+            if (lockBoard || card.classList.contains('flipped') || (isSolo && turn === 1)) return;
+
+            card.classList.add('flipped');
+            flipped.push(card);
+
+            if (flipped.length === 2) checkMatch();
+        }
+
+        function checkMatch() {
+            lockBoard = true;
+            const match = flipped[0].dataset.icon === flipped[1].dataset.icon;
+
+            if (match) {
+                setTimeout(() => {
+                    flipped.forEach(c => c.classList.add('matched'));
+                    scores[turn]++;
+                    updateScores();
+                    resetTurn();
+                    checkGameOver();
+                }, 700);
+            } else {
+                setTimeout(() => {
+                    flipped.forEach(c => c.classList.remove('flipped'));
+                    turn = turn === 0 ? 1 : 0;
+                    updateUI();
+                    resetTurn();
+                    if(isSolo && turn === 1) setTimeout(aiMove, 600);
+                }, 1000);
+            }
+        }
+
+        function resetTurn() {
+            flipped = [];
+            lockBoard = false;
+        }
+
+        function updateScores() {
+            document.getElementById('score1').innerText = scores[0];
+            document.getElementById('score2').innerText = scores[1];
+        }
+
+        function updateUI() {
+            document.getElementById('score1-box').classList.toggle('active-player', turn === 0);
+            document.getElementById('score2-box').classList.toggle('active-player', turn === 1);
+        }
+
+        function aiMove() {
+            const available = [...document.querySelectorAll('.card:not(.flipped):not(.matched)')];
+            if (available.length < 2) return;
+
+            const c1 = available.splice(Math.floor(Math.random() * available.length), 1)[0];
+            const c2 = available.splice(Math.floor(Math.random() * available.length), 1)[0];
+
+            c1.classList.add('flipped');
+            flipped.push(c1);
+            
+            setTimeout(() => {
+                c2.classList.add('flipped');
+                flipped.push(c2);
+                checkMatch();
+            }, 800);
+        }
+
+        function checkGameOver() {
+            if (document.querySelectorAll('.matched').length === 16) {
+                alert('انتهت اللعبة! النتيجة: ' + scores[0] + ' - ' + scores[1]);
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
